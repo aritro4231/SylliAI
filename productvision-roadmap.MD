@@ -1,6 +1,6 @@
 # Product Vision
 
-add elevator pitch here
+Our idea is to use LLMs to interpret a students syllabus, providing sources through lines and page numbers. As students, the first week of class is used by professors for going over the syllabus. Most syllabus are long and tedious to read, so many students either do not read or understand the syllabus leading to surprises later in the course. The product will give students the ability to sign up and upload syllabi and other class documents through a user interface, and can then “chat” with the LLM to better understand and dissect the documents and course policies. 
 
 # Product Backlog
 
