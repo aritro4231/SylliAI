@@ -18,7 +18,7 @@ source venv/bin/activate  # On Windows use: .\venv\Scripts\activate
 pip install -r requirements.txt
 
 ```
-Add a .env
+Add a .env file thats the same as the .env.dev file
 
 ### 2. Node.js Setup
 
