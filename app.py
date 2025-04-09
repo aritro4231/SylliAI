@@ -13,8 +13,8 @@ app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "your-secret-key")
 
 
-#supabase_url = os.getenv("SUPABASE_URL", "https://wwpdbvewqeoindredumk.supabase.co")
-supabase_url = os.getenv("SUPABASE_URL", "https://cmkwvyhqmsonrzveejze.supabase.co")
+supabase_url = os.getenv("SUPABASE_URL", "https://wwpdbvewqeoindredumk.supabase.co")
+#supabase_url = os.getenv("SUPABASE_URL", "https://cmkwvyhqmsonrzveejze.supabase.co")
 supabase_key = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(supabase_url, supabase_key)
 
