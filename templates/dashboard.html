@@ -35,9 +35,12 @@
             </tbody>
         </table>
     </div>
+    <div class = "flex justify-between items-center mb-6">
+        <a href ="{{url_for('chat')}}" class = "btn btn-primary">Chat with SylliAI</a>
+    </div>
     {% else %}
     <div class="text-center py-8">
-        <p class="text-gray-600 mb-4">You haven't uploaded any syllabi yet.</p>
+        <p class="text-gray-600 mb-4">Upload a syllbus to start chatting.</p>
         <a href="{{ url_for('upload_syllabus') }}" class="btn btn-primary">Upload Your First Syllabus</a>
     </div>
     {% endif %}

@@ -207,8 +207,6 @@ def settings():
     if 'user_id' not in session:
         flash('Please log in to access settings', 'error')
         return redirect(url_for('login'))
-    
-    
     try:
         # Check if both tokens exist in session before using them
         if 'access_token' in session and 'refresh_token' in session:
@@ -231,6 +229,7 @@ def settings():
     return render_template('settings.html', user=user)
 
 #Finish this implementation
+@app.route('/chat', methods=['GET', 'POST'])
 def chat():
     if 'user_id' not in session:
         flash('Please log in to access chat', 'error')
