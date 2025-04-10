@@ -3,20 +3,24 @@ from supabase import create_client, Client
 import os
 from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
+from openai import OpenAI
 import uuid
 from flask import send_file
 
 
-load_dotenv()
+load_dotenv(".env.dev")
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "your-secret-key")
 
 
 supabase_url = os.getenv("SUPABASE_URL", "https://wwpdbvewqeoindredumk.supabase.co")
+#supabase_url = os.getenv("SUPABASE_URL", "https://cmkwvyhqmsonrzveejze.supabase.co")
 supabase_key = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(supabase_url, supabase_key)
 
+#openai_api_key = os.getenv("OPENAI_API_KEY")
+#aiClient = OpenAI(api_key=openai_api_key)
 
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'pdf', 'docx', 'txt'}
@@ -204,8 +208,6 @@ def settings():
     if 'user_id' not in session:
         flash('Please log in to access settings', 'error')
         return redirect(url_for('login'))
-    
-    
     try:
         # Check if both tokens exist in session before using them
         if 'access_token' in session and 'refresh_token' in session:
@@ -226,6 +228,27 @@ def settings():
         return redirect(url_for('settings'))
     
     return render_template('settings.html', user=user)
+
+#Finish this implementation
+@app.route('/chat', methods=['GET', 'POST'])
+def chat():
+    if 'user_id' not in session:
+        flash('Please log in to access chat', 'error')
+        return redirect(url_for('login'))
+    
+    try:
+        # Check if both tokens exist in session before using them
+        if 'access_token' in session and 'refresh_token' in session:
+            supabase.auth.set_session(session['access_token'], session['refresh_token'])
+        else:
+            flash('Session expired. Please log in again.', 'error')
+            return redirect(url_for('login'))
+        
+        # Implement chat functionality here
+    except Exception as e:
+        flash(f'Error retrieving chat data: {str(e)}', 'error')
+    
+    return render_template('chat.html')
 
 @app.route('/syllabus/<syllabus_id>', methods=['GET', 'POST'])
 def view_syllabus(syllabus_id):

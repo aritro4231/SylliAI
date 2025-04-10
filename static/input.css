@@ -50,3 +50,7 @@
 .card {
   @apply bg-white p-6 rounded-xl shadow-md;
 }
+
+.text-box {
+  @apply w-full p-3 border rounded-md border-gray-300 focus:outline-none focus:ring focus:ring-indigo-200 focus:ring-opacity-50;
+}
