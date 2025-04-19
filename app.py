@@ -3,9 +3,10 @@ from supabase import create_client, Client
 import os
 from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
-from openai import OpenAI
+from google import genai
 import uuid
 from flask import send_file
+from flask import jsonify
 
 
 load_dotenv(".env.dev")
@@ -19,8 +20,8 @@ supabase_url = os.getenv("SUPABASE_URL", "https://wwpdbvewqeoindredumk.supabase.
 supabase_key = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(supabase_url, supabase_key)
 
-#openai_api_key = os.getenv("OPENAI_API_KEY")
-#aiClient = OpenAI(api_key=openai_api_key)
+gemini_api_key = os.getenv("GEMINI_API_KEY")
+client = genai.Client(api_key=gemini_api_key)
 
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'pdf', 'docx', 'txt'}
@@ -46,7 +47,6 @@ def signup():
         name = request.form.get('name')
         
         try:
-            
             response = supabase.auth.sign_up({
                 "email": email,
                 "password": password
@@ -229,7 +229,6 @@ def settings():
     
     return render_template('settings.html', user=user)
 
-#Finish this implementation
 @app.route('/chat', methods=['GET', 'POST'])
 def chat():
     if 'user_id' not in session:
@@ -237,16 +236,53 @@ def chat():
         return redirect(url_for('login'))
     
     try:
-        # Check if both tokens exist in session before using them
         if 'access_token' in session and 'refresh_token' in session:
             supabase.auth.set_session(session['access_token'], session['refresh_token'])
         else:
             flash('Session expired. Please log in again.', 'error')
             return redirect(url_for('login'))
         
-        # Implement chat functionality here
+        if request.method == 'POST':
+            data = request.get_json()
+            user_message = data.get('message')
+            
+            # Retrieve all syllabi for the user
+            syllabi_response = supabase.table('syllabi').select('*').eq('user_id', session['user_id']).execute()
+            
+            # Extract content from syllabi for context
+            context_docs = []
+            for syllabus in syllabi_response.data:
+                if syllabus.get('content'):
+                    context_docs.append({
+                        'content': syllabus['content'],
+                        'course_name': syllabus['course_name']
+                    })
+            
+            # Create system message with context
+            prompt = """You are SylliAI, an AI assistant that helps students understand their course syllabi. 
+            Use the following syllabi content as context for answering questions. 
+            If the answer cannot be found in the context, state that clearly.
+            
+            Context:"""
+            
+            # Add context from syllabi
+            for doc in context_docs:
+                prompt += f"\n\nCourse: {doc['course_name']}\n{doc['content']}"
+            
+            # Add user question
+            prompt += f"\n\nUser Question: {user_message}\nAnswer:"
+            
+            try:
+                # Configure Gemini
+                # Generate response
+                response = client.models.generate_content(model = 'gemini-2.0-flash',contents=prompt)
+                
+                return jsonify({"response": response.text})
+            except Exception as e:
+                return jsonify({"error": f"Error generating response: {str(e)}"}), 500
+            
     except Exception as e:
-        flash(f'Error retrieving chat data: {str(e)}', 'error')
+        return jsonify({"error": f"Error retrieving chat data: {str(e)}"}), 500
     
     return render_template('chat.html')
 
