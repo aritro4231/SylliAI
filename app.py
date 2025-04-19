@@ -246,42 +246,62 @@ def chat():
             data = request.get_json()
             user_message = data.get('message')
             
-            # Retrieve all syllabi for the user
+            # Retrieve all syllabi and documents for the user
             syllabi_response = supabase.table('syllabi').select('*').eq('user_id', session['user_id']).execute()
             
-            # Extract content from syllabi for context
+            # Extract content and metadata from syllabi and documents
             context_docs = []
             for syllabus in syllabi_response.data:
-                if syllabus.get('content'):
-                    context_docs.append({
-                        'content': syllabus['content'],
-                        'course_name': syllabus['course_name']
-                    })
+                syllabus_content = {
+                    'course_name': syllabus.get('course_name', 'Untitled Course'),
+                    'content': syllabus.get('content', ''),
+                    'type': 'syllabus'
+                }
+                
+                # If it's a file-based syllabus, try to extract content
+                if syllabus.get('content_type') == 'file' and syllabus.get('file_path'):
+                    try:
+                        with open(syllabus['file_path'], 'r') as file:
+                            syllabus_content['content'] = file.read()
+                    except Exception as e:
+                        print(f"Error reading syllabus file: {str(e)}")
+                
+                if syllabus_content['content']:
+                    context_docs.append(syllabus_content)
             
-            # Create system message with context
-            prompt = """You are SylliAI, an AI assistant that helps students understand their course syllabi. 
-            Use the following syllabi content as context for answering questions. 
-            If the answer cannot be found in the context, state that clearly.
+            # Create enhanced prompt for Gemini
+            prompt = """You are SylliAI, an AI assistant specialized in analyzing course syllabi and related documents.
+            Analyze the following content and provide detailed, accurate answers based on the available information.
+            If information is not found in the documents, clearly state that.
             
-            Context:"""
+            Available Documents:
+            """
             
-            # Add context from syllabi
+            # Add context with document structure
             for doc in context_docs:
-                prompt += f"\n\nCourse: {doc['course_name']}\n{doc['content']}"
+                prompt += f"\n\nDocument Type: {doc['type']}\nCourse: {doc['course_name']}\nContent:\n{doc['content']}"
             
-            # Add user question
-            prompt += f"\n\nUser Question: {user_message}\nAnswer:"
+            # Add specific analysis instructions
+            prompt += f"""
+            User Question: {user_message}
+            Please provide a comprehensive answer based on the available documents:"""
             
             try:
                 # Configure Gemini
                 # Generate response
                 response = client.models.generate_content(model = 'gemini-2.0-flash',contents=prompt)
                 
-                return jsonify({"response": response.text})
+                return jsonify({
+                    "response": response.text,
+                    "sources": [doc['course_name'] for doc in context_docs]
+                })
+            
             except Exception as e:
+                print(f"Gemini API error: {str(e)}")  # For debugging
                 return jsonify({"error": f"Error generating response: {str(e)}"}), 500
             
     except Exception as e:
+        print(f"Chat function error: {str(e)}")  # For debugging
         return jsonify({"error": f"Error retrieving chat data: {str(e)}"}), 500
     
     return render_template('chat.html')
