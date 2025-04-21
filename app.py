@@ -7,6 +7,10 @@ from google import genai
 import uuid
 from flask import send_file
 from flask import jsonify
+import io
+from pypdf import PdfReader
+from docx import Document
+import pdfplumber
 
 
 load_dotenv(".env.dev")
@@ -16,7 +20,6 @@ app.secret_key = os.getenv("SECRET_KEY", "your-secret-key")
 
 
 supabase_url = os.getenv("SUPABASE_URL", "https://wwpdbvewqeoindredumk.supabase.co")
-#supabase_url = os.getenv("SUPABASE_URL", "https://cmkwvyhqmsonrzveejze.supabase.co")
 supabase_key = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(supabase_url, supabase_key)
 
@@ -229,6 +232,27 @@ def settings():
     
     return render_template('settings.html', user=user)
 
+def extract_text_from_file(file_path):
+    try:
+        if file_path.lower().endswith('.pdf'):
+            with pdfplumber.open(file_path) as pdf:
+                text = ''
+                for page in pdf.pages:
+                    text += page.extract_text() or ''
+            return text.strip()
+        elif file_path.lower().endswith('.docx'):
+            doc = Document(file_path)
+            text = '\n'.join([para.text for para in doc.paragraphs])
+            return text.strip()
+        elif file_path.lower().endswith('.txt'):
+            with open(file_path, 'r') as file:
+                return file.read().strip()
+        else:
+            return "Unsupported file type"
+    except Exception as e:
+        print(f"Error reading file {file_path}: {str(e)}")
+        return None
+
 @app.route('/chat', methods=['GET', 'POST'])
 def chat():
     if 'user_id' not in session:
@@ -260,12 +284,10 @@ def chat():
                 
                 # If it's a file-based syllabus, try to extract content
                 if syllabus.get('content_type') == 'file' and syllabus.get('file_path'):
-                    try:
-                        with open(syllabus['file_path'], 'r') as file:
-                            syllabus_content['content'] = file.read()
-                    except Exception as e:
-                        print(f"Error reading syllabus file: {str(e)}")
-                
+                    extraced_text = extract_text_from_file(syllabus['file_path'])
+                    if extraced_text:
+                        syllabus_content['content'] = extraced_text
+                        
                 if syllabus_content['content']:
                     context_docs.append(syllabus_content)
             
