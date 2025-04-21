@@ -7,6 +7,9 @@ from google import genai
 import uuid
 from flask import send_file
 from flask import jsonify
+from docx import Document
+import fitz  
+
 
 
 load_dotenv(".env.dev")
@@ -29,9 +32,19 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
+    
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def pdf_extractor(file):
+    text = ""
+    with fitz.open(file) as pdf:
+        for page in pdf:
+            text = text + page.get_text()
+    return text
+
 
 @app.route('/')
 def index():
