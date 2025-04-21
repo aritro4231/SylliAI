@@ -49,3 +49,6 @@ WTForms==3.2.1
 yarl==1.18.3
 google-genai == 0.2.0
 google-generativeai == 0.3.2
+pypdf==3.8.1
+python-docx==0.8.11
+pdfplumber==0.10.3
