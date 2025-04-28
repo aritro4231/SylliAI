@@ -175,12 +175,12 @@ def upload_syllabus():
                     else:
                         flash('Session expired. Please log in again.', 'error')
                         return redirect(url_for('login'))
-                    
+                    fileExtension = filename.rsplit('.', 1)[1].lower()
                     supabase.table('syllabi').insert({
                         "user_id": session['user_id'],
                         "course_name": course_name,
                         "file_path": file_path,
-                        "content_type": "file"
+                        "content_type": f"{fileExtension.upper()} File"
                     }).execute()
                 except Exception as e:
                     flash(f'Error uploading syllabus: {str(e)}', 'error')
@@ -293,7 +293,7 @@ def chat():
                 }
                 
                 # If it's a file-based syllabus, try to extract content
-                if syllabus.get('content_type') == 'file' and syllabus.get('file_path'):
+                if syllabus.get('content_type', '').lower().endswith('file') and syllabus.get('file_path'):
                     extraced_text = extract_text_from_file(syllabus['file_path'])
                     if extraced_text:
                         syllabus_content['content'] = extraced_text
