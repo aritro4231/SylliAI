@@ -243,20 +243,24 @@ def settings():
     return render_template('settings.html', user=user)
 
 def extract_text_from_file(file_path):
-    try:
+    try:    
         if file_path.lower().endswith('.pdf'):
             with pdfplumber.open(file_path) as pdf:
                 text = ''
-                for page in pdf.pages:
+                for page_number, page in enumerate(pdf.pages):
                     text += page.extract_text() or ''
-            return text.strip()
+            return text.strip()   
+         
         elif file_path.lower().endswith('.docx'):
             doc = Document(file_path)
             text = '\n'.join([para.text for para in doc.paragraphs])
-            return text.strip()
+            return text.strip()    
+        
         elif file_path.lower().endswith('.txt'):
             with open(file_path, 'r') as file:
-                return file.read().strip()
+                text = file.read().strip()
+            return text
+        
         else:
             return "Unsupported file type"
     except Exception as e:
@@ -413,6 +417,58 @@ def view_syllabus(syllabus_id):
     except Exception as e:
         flash(f'Error: {str(e)}', 'error')
         return redirect(url_for('dashboard'))
+
+@app.route('/syllabus/<syllabus_id>/chat', methods=['POST'])
+def syllabus_chat(syllabus_id):
+    if 'user_id' not in session:
+        return jsonify({"error": "Please log in to access the chatbot."}), 401
+
+    try:
+        if 'access_token' in session and 'refresh_token' in session:
+            supabase.auth.set_session(session['access_token'], session['refresh_token'])
+        else:
+            return jsonify({"error": "Session expired. Please log in again."}), 401
+
+        # Get syllabus data
+        syllabus_response = supabase.table('syllabi').select('*').eq('id', syllabus_id).execute()
+        if not syllabus_response.data:
+            return jsonify({"error": "Syllabus not found."}), 404
+
+        syllabus = syllabus_response.data[0]
+
+        # Check if user owns this syllabus
+        if syllabus['user_id'] != session['user_id']:
+            return jsonify({"error": "You do not have permission to access this syllabus."}), 403
+
+        # Handle chatbot request
+        data = request.get_json()
+        user_message = data.get('message')
+
+        # Prepare context for the chatbot
+        context = f"Syllabus: {syllabus.get('course_name', 'Untitled Course')}\n"
+        if syllabus.get('content'):
+            context += f"Content:\n{syllabus['content']}\n"
+        elif syllabus.get('file_path'):
+            extracted_text = extract_text_from_file(syllabus['file_path'])
+            context += f"Extracted Content:\n{extracted_text}\n"
+
+        # Generate response using Gemini
+        prompt = f"""
+        You are SylliAI, an AI assistant specialized in analyzing course syllabi.
+        Based on the following syllabus, answer the user's question:
+
+        {context}
+
+        User Question: {user_message}
+        """
+        try:
+            response = client.models.generate_content(model='gemini-2.0-flash', contents=prompt)
+            return jsonify({"response": response.text})
+        except Exception as e:
+            return jsonify({"error": f"Error generating response: {str(e)}"}), 500
+
+    except Exception as e:
+        return jsonify({"error": f"Error: {str(e)}"}), 500
 
 @app.route('/delete_syllabus/<syllabus_id>')
 def delete_syllabus(syllabus_id):
